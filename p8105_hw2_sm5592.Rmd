@@ -1,0 +1,78 @@
+---
+title: "Homework 2"
+author: "Shaolei Ma"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r libraries}
+library(tidyverse)
+```
+
+# Problem 1
+
+## pols-month
+
+```{r}
+pols_df =
+  read_csv("fivethirtyeight_datasets/pols-month.csv") |> 
+  janitor::clean_names() |> 
+  separate(mon, into = c("year", "month", "day"), sep = "-", 
+           convert = T) |> # convert to integers
+  arrange(year, month) |> # order before months are replaced with names
+  mutate(
+    month = substr(month.name[month], 1, 3), # change to abbr to merge with unemployment data set
+    president = case_when(
+    prez_dem == 1 ~ "dem",
+    prez_gop == 1 ~ "gop"
+    )) |> 
+  select(-prez_dem, -prez_gop, -day) |> 
+  relocate(year, month, president)
+```
+
+## snp
+
+```{r}
+snp_df = 
+  read_csv("fivethirtyeight_datasets/snp.csv") |> 
+  janitor::clean_names() |> 
+  mutate(date = as.Date(date,
+                        format = "%m/%d/%y")) |> # change to date format
+  mutate(date = ifelse(
+    date > Sys.Date(),
+    format(date, "19%y-%m-%d"),
+    format(date)
+  )) |> # correct the century
+  separate(date, into = c("year", "month", "day"), sep = "-", 
+           convert = T) |> 
+  arrange(year, month) |>
+  mutate(month = substr(month.name[month], 1, 3)) |> 
+  select(-day) |> 
+  relocate(year, month)
+```
+
+## Join the datasets
+
+```{r}
+# clean the unemployment data set
+unemployment_df =
+  read_csv("fivethirtyeight_datasets/unemployment.csv") |> 
+  pivot_longer(
+    Jan:Dec,
+    names_to = "month",
+    values_to = "unemploy_rate"
+  ) |> 
+  janitor::clean_names()
+
+# merge
+result_df = 
+  pols_df |> 
+  left_join(snp_df,
+            by = join_by(year, month)) |> 
+  left_join(unemployment_df,
+            by = join_by(year, month))
+```
+
+## Describe the datasets
+The cleaned data set "pols-month" contains `r nrow(pols_df)` observations of `r ncol(pols_df)` variables related to the number of national politicians who are democratic or republican at any given time from `r min(pols_df$year)` to `r max(pols_df$year)`. The cleaned data set "snp" contains `r nrow(snp_df)` observations of `r ncol(snp_df)` variables related to Standard & Poor’s stock market index (S&P), often used as a representative measure of stock market as a whole, from `r min(snp_df$year)` to `r max(snp_df$year)`. The cleaned data set "unemployment" contains `r nrow(unemployment_df)` observations of `r ncol(unemployment_df)` variables related to the unemployment rate in any given month from `r min(unemployment_df$year)` to `r max(unemployment_df$year)`.  
+For the resulting data set, it contains `r nrow(result_df)` observations of `r ncol(result_df)` variables related to all three parts of data mentioned above from `r paste(pols_df$month[1], min(pols_df$year), sep = ", ")` to `r paste(pols_df$month[nrow(pols_df)], max(pols_df$year), sep = ", ")`. Specifically, the `president` variable indicates whether the president was republican (gop) or democratic (dem) on the associated date; the `close` variable indicates the closing values of the S&P stock index on the associated date; the `unemploy_rate` variable indicates the percentage of unemployment on the associated date.
