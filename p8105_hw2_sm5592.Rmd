@@ -37,10 +37,9 @@ Second, clean the data in snp.csv using a similar process to the above.
 
 ```{r}
 snp_df = 
-  read_csv("data/fivethirtyeight_datasets/snp.csv") |> 
+  read_csv("data/fivethirtyeight_datasets/snp.csv",
+           col_types = cols(date = col_date(format = "%m/%d/%y"))) |> 
   janitor::clean_names() |> 
-  mutate(date = as.Date(date,
-                        format = "%m/%d/%y")) |> # change to date format
   mutate(date = ifelse(
     date > Sys.Date(),
     format(date, "19%y-%m-%d"),
@@ -87,7 +86,7 @@ Read and clean the Mr. Trash Wheel sheet:
 
 ```{r}
 mr_trash_wheel_df = 
-  read_excel("data/202207 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:M550") |> 
+  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:M550") |> 
   janitor::clean_names() |> # use reasonable variable names
   drop_na(dumpster) |> # omit rows that do not include dumpster-specific data
   mutate(homes_powered = weight_tons * 500 / 30,
@@ -99,14 +98,14 @@ Use a similar process to import, clean, and organize the data for Professor Tras
 
 ```{r}
 prof_trash_wheel_df = 
-  read_excel("data/202207 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:L97") |> 
+  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:L97") |> 
   janitor::clean_names() |> # use reasonable variable names
   drop_na(dumpster) |> # omit rows that do not include dumpster-specific data
   mutate(homes_powered = weight_tons * 500 / 30,
          name = "Professor")
 
 gwy_trash_wheel_df = 
-  read_excel("data/202207 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", range = "A2:J110") |> 
+  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", range = "A2:J110") |> 
   janitor::clean_names() |> # use reasonable variable names
   drop_na(dumpster) |> # omit rows that do not include dumpster-specific data
   mutate(homes_powered = weight_tons * 500 / 30,
@@ -147,8 +146,16 @@ mci_baseline_df =
       1 ~ "APOE4 carrier",
       0 ~ "APOE4 non-carrier"
     )
-  ) |> 
-  # the MCI onset happens after baseline
+  )
+
+# collect the participants that fail to reach the criteria
+id_removed = mci_baseline_df |> 
+  filter(current_age >= age_at_onset) |> 
+  pull(id)
+
+# remove the participants from the dataset
+mci_baseline_df = 
+  mci_baseline_df |> 
   filter(current_age < age_at_onset | is.na(age_at_onset) == 1)
 ```
 
@@ -171,7 +178,8 @@ mci_amyloid_df =
   mutate( # change baseline to 0 year
     time_in_years = replace(time_in_years, time_in_years == "baseline", 0),
     amyloid_beta_42_40_ratio = as.numeric(amyloid_beta_42_40_ratio)
-  )
+  ) |> # move the participants that do not meet the criteria
+  filter(!study_id %in% id_removed)
 ```
 
 For the data cleaning, first I skipped the first row which contains notes for the columns, and treated "Na" and "NA" both as NA values because there is an "Na" value inside the "Baseline" variable. Then I converted the five variables measuring the ratio at a given time into two variables named "time_in_years" and "amyloid_beta_42_40_ratio". After cleaning, the data set contains `r nrow(mci_amyloid_df)` observations of `r ncol(mci_amyloid_df)` variables. The ratio distribution for different years is illustrated below:
@@ -195,7 +203,7 @@ all_participants_df =
             keep = T) # keep both id and study_id for comparision
 ```
 
-Then, `r sum(is.na(all_participants_df$id))` participants are only in the amyloid datset, `r sum(is.na(all_participants_df$study_id))` participants are only in the baseline datset.  
+Then, `r length(unique(all_participants_df$study_id[is.na(all_participants_df$id)]))` participants are only in the amyloid datset, `r sum(is.na(all_participants_df$study_id))` participants are only in the baseline datset.  
 Retain only the participants who appear in both datasets.
 
 ```{r}
