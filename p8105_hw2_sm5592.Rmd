@@ -86,7 +86,7 @@ Read and clean the Mr. Trash Wheel sheet:
 
 ```{r}
 mr_trash_wheel_df = 
-  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:M550") |> 
+  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:M587") |> 
   janitor::clean_names() |> # use reasonable variable names
   drop_na(dumpster) |> # omit rows that do not include dumpster-specific data
   mutate(homes_powered = weight_tons * 500 / 30,
@@ -98,14 +98,14 @@ Use a similar process to import, clean, and organize the data for Professor Tras
 
 ```{r}
 prof_trash_wheel_df = 
-  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:L97") |> 
+  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:L109") |> 
   janitor::clean_names() |> # use reasonable variable names
   drop_na(dumpster) |> # omit rows that do not include dumpster-specific data
   mutate(homes_powered = weight_tons * 500 / 30,
          name = "Professor")
 
 gwy_trash_wheel_df = 
-  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", range = "A2:J110") |> 
+  read_excel("data/202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", range = "A2:K159") |> 
   janitor::clean_names() |> # use reasonable variable names
   drop_na(dumpster) |> # omit rows that do not include dumpster-specific data
   mutate(homes_powered = weight_tons * 500 / 30,
